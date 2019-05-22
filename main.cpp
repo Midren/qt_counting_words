@@ -109,7 +109,7 @@ int main(int argc, char *argv[]) {
     std::string dir = "../.tmp/";
     boost::filesystem::create_directory(dir);
     boost::filesystem::path currentDir = boost::filesystem::current_path();
-//    unzip_files(boost::filesystem::canonical(dir).string() + "/", boost::filesystem::canonical(a->infile).string());
+    unzip_files(boost::filesystem::canonical(dir).string() + "/", boost::filesystem::canonical(a->infile).string());
     boost::filesystem::current_path(currentDir);
     std::cout << "Started counting words!" << std::endl;
     boost::filesystem::recursive_directory_iterator it(dir), end;
@@ -118,6 +118,7 @@ int main(int argc, char *argv[]) {
     std::array<std::vector<std::vector<std::vector<std::string>>>, 2> word_blocks_vecs;
     int curr = 0;
     std::array<QFutureSynchronizer<wMap>, 2> syncs;
+    size_t cnt = 0;
     for (auto &entry: boost::make_iterator_range(it, end)) {
         std::string previous = entry.path().string();
         std::string data = check_input(previous);
@@ -125,10 +126,14 @@ int main(int argc, char *argv[]) {
         syncs[curr].addFuture(
                 QtConcurrent::mappedReduced(word_blocks_vecs[curr][word_blocks_vecs[curr].size() - 1], count_words,
                                             merge));
-        if (word_blocks_vecs[curr].size() > 500) {
+        if(++cnt % 100 == 0) {
+            std::cout << cnt << std::endl;
+        }
+        if (word_blocks_vecs[curr].size() > 150) {
             syncs[curr ^ 1].waitForFinished();
             syncs[curr ^ 1].clearFutures();
             word_blocks_vecs[curr ^ 1].clear();
+            word_blocks_vecs[curr ^ 1].shrink_to_fit();
             syncs[curr ^ 1].addFuture(QtConcurrent::mappedReduced(syncs[curr].futures(),
                                                                   std::function<wMap(QFuture<wMap>)>(
                                                                           [](QFuture<wMap> prom) {

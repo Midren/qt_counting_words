@@ -1,0 +1,13 @@
+!_TAG_FILE_SORTED	2	/0=unsorted, 1=sorted, 2=foldcase/
+add	/home/midren/Documents/ucu/axe/lab5/main.cpp	/^void add(int &x, int y) {$/;"	f	language:C++
+any_str	/home/midren/Documents/ucu/axe/lab5/main.cpp	/^bool any_str(const std::string &str) {$/;"	f	language:C++
+count_words	/home/midren/Documents/ucu/axe/lab5/main.cpp	/^wMap count_words(std::vector<std::string> words) {$/;"	f	language:C++
+get_current_wall_time_fenced	/home/midren/Documents/ucu/axe/lab5/main.cpp	/^inline best_resolution_cpp_clock::time_point get_current_wall_time_fenced() {$/;"	f	language:C++
+main	/home/midren/Documents/ucu/axe/lab5/main.cpp	/^int main(int argc, char *argv[]) {$/;"	f	language:C++
+MAP	/home/midren/Documents/ucu/axe/lab5/main.cpp	18;"	d	language:C++	file:
+merge	/home/midren/Documents/ucu/axe/lab5/main.cpp	/^void merge(wMap &result, wMap map) {$/;"	f	language:C++
+same	/home/midren/Documents/ucu/axe/lab5/main.cpp	/^wMap same(wMap i) {$/;"	f	language:C++
+split_to_words	/home/midren/Documents/ucu/axe/lab5/main.cpp	/^std::vector<std::vector<std::string>> split_to_words(std::string &data) {$/;"	f	language:C++
+to_us	/home/midren/Documents/ucu/axe/lab5/main.cpp	/^inline uint64_t to_us(const D &d) {$/;"	f	language:C++
+wMap	/home/midren/Documents/ucu/axe/lab5/main.cpp	/^typedef std::map<std::string, size_t> wMap;$/;"	t	language:C++	file:
+wMap	/home/midren/Documents/ucu/axe/lab5/main.cpp	/^typedef std::unordered_map<std::string, size_t> wMap;$/;"	t	language:C++	file:
