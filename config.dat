@@ -1,4 +1,4 @@
-in_dir= ../data/
+in_dir=/mnt/iso
 out_by_a=res_a.txt
 out_by_n=res_n.txt
 threads=4

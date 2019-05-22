@@ -72,6 +72,10 @@ void merge(wMap &result, wMap map) {
     }
 }
 
+wMap same(wMap i) {
+    return i;
+}
+
 #if defined _WIN32
 using best_resolution_cpp_clock = std::chrono::steady_clock;
 #else
@@ -100,32 +104,69 @@ int main(int argc, char *argv[]) {
         std::cout << "Invalid input: ./multiple_threads <path to config>" << std::endl;
     }
 
-    std::vector<wMap> map_vec;
+    std::vector<wMap> map_vec = {wMap{}};
     std::string dir = "../.tmp/";
     boost::filesystem::create_directory(dir);
-    auto start_counting = get_current_wall_time_fenced();
     boost::filesystem::path currentDir = boost::filesystem::current_path();
-    unzip_files(boost::filesystem::canonical(dir).string() + "/", boost::filesystem::canonical(a->infile).string());
+//    unzip_files(boost::filesystem::canonical(dir).string() + "/", boost::filesystem::canonical(a->infile).string());
     boost::filesystem::current_path(currentDir);
     std::cout << "Started counting words!" << std::endl;
     boost::filesystem::recursive_directory_iterator it(dir), end;
-    for (auto& entry: boost::make_iterator_range(it, end)){
+
+    auto start_counting = get_current_wall_time_fenced();
+    size_t cnt = 0;
+    QFuture<wMap> res = QtConcurrent::mappedReduced(map_vec, same, merge),
+            new_vec = QtConcurrent::mappedReduced(map_vec, same, merge);
+    for (auto &entry: boost::make_iterator_range(it, end)) {
         std::string previous = entry.path().string();
         std::string data = check_input(previous);
         auto words_block = split_to_words(data);
-        auto new_vec = QtConcurrent::mappedReduced(words_block, count_words, merge);
+        if (cnt % 100 == 0)
+            std::cout << cnt++ << std::endl;
+
         new_vec.waitForFinished();
         map_vec.push_back(*new_vec.begin());
-    }
+        std
 
-    auto res = QtConcurrent::mappedReduced(map_vec, std::function<wMap(wMap)>([](wMap map) {
+//        if (map_vec.size() > 1000) {
+//            res.waitForFinished();
+//            map_vec = {res.result()};
+//            res = QtConcurrent::mappedReduced(map_vec, same, merge);
+//        }
+        new_vec = QtConcurrent::mappedReduced(words_block, count_words, merge);
+//        res = QFuture<wMap>();
+    }
+//    boost::filesystem::remove_all(dir);
+
+    new_vec.waitForFinished();
+    map_vec.push_back(*new_vec.begin());
+
+    res = QtConcurrent::mappedReduced(map_vec, std::function<wMap(wMap)>([](wMap map) {
         return map;
     }), merge);
     res.waitForFinished();
-    for(auto word: *res.begin()) {
-        std::cout << word.first << " " << word.second;
-    }
     auto end_counting = get_current_wall_time_fenced();
-    std::cout << "Total: " << to_us(end_counting - start_counting) << std::endl;
+
+    std::vector<std::pair<std::string, size_t>> tmp;
+    tmp.reserve(res.begin()->size());
+    for (auto x: *res.begin()) {
+        tmp.emplace_back(x.first, x.second);
+    }
+    std::sort(tmp.begin(), tmp.end(), [](auto x, auto y) {
+        return x.first < y.first;
+    });
+    std::ofstream fout1(a->out_by_a);
+    for (auto x: tmp) {
+        fout1 << x.first << "\t:\t" << x.second << std::endl;
+    }
+    std::sort(tmp.begin(), tmp.end(), [](auto x, auto y) {
+        return x.second > y.second;
+    });
+    std::ofstream fout2(a->out_by_n);
+    for (auto x: tmp) {
+        fout2 << x.first << "\t:\t" << x.second << std::endl;
+    }
+
+    std::cout << "Counting: " << to_us(end_counting - start_counting) << std::endl;
     return 0;
 }
