@@ -115,35 +115,24 @@ int main(int argc, char *argv[]) {
 
     auto start_counting = get_current_wall_time_fenced();
     size_t cnt = 0;
-    QFuture<wMap> res = QtConcurrent::mappedReduced(map_vec, same, merge),
-            new_vec = QtConcurrent::mappedReduced(map_vec, same, merge);
+    std::vector<QFuture<wMap> > promises;
     for (auto &entry: boost::make_iterator_range(it, end)) {
         std::string previous = entry.path().string();
         std::string data = check_input(previous);
         auto words_block = split_to_words(data);
-        if (cnt % 100 == 0)
-            std::cout << cnt++ << std::endl;
-
-        new_vec.waitForFinished();
-        map_vec.push_back(*new_vec.begin());
-        std
-
-//        if (map_vec.size() > 1000) {
-//            res.waitForFinished();
-//            map_vec = {res.result()};
-//            res = QtConcurrent::mappedReduced(map_vec, same, merge);
-//        }
-        new_vec = QtConcurrent::mappedReduced(words_block, count_words, merge);
-//        res = QFuture<wMap>();
+        auto new_vec = QtConcurrent::mappedReduced(words_block, count_words, merge);
+        promises.push_back(new_vec);
     }
-//    boost::filesystem::remove_all(dir);
 
-    new_vec.waitForFinished();
-    map_vec.push_back(*new_vec.begin());
+    for(auto prom: promises){
+        prom.waitForFinished();
+        map_vec.push_back(*prom.begin());
+    }
 
-    res = QtConcurrent::mappedReduced(map_vec, std::function<wMap(wMap)>([](wMap map) {
+    auto res = QtConcurrent::mappedReduced(map_vec, std::function<wMap(wMap)>([](wMap map) {
         return map;
     }), merge);
+
     res.waitForFinished();
     auto end_counting = get_current_wall_time_fenced();
 
