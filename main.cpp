@@ -122,11 +122,23 @@ int main(int argc, char *argv[]) {
         std::string previous = entry.path().string();
         std::string data = check_input(previous);
         word_blocks_vecs[curr].emplace_back(split_to_words(data));
-        sync.addFuture(
-                QtConcurrent::mappedReduced(word_blocks_vecs[curr][word_blocks_vecs[curr].size() - 1], count_words, merge));
+        syncs[curr].addFuture(
+                QtConcurrent::mappedReduced(word_blocks_vecs[curr][word_blocks_vecs[curr].size() - 1], count_words,
+                                            merge));
+        if (word_blocks_vecs[curr].size() > 500) {
+            syncs[curr ^ 1].waitForFinished();
+            syncs[curr ^ 1].clearFutures();
+            word_blocks_vecs[curr ^ 1].clear();
+            syncs[curr ^ 1].addFuture(QtConcurrent::mappedReduced(syncs[curr].futures(),
+                                                                  std::function<wMap(QFuture<wMap>)>(
+                                                                          [](QFuture<wMap> prom) {
+                                                                              return prom.result();
+                                                                          }), merge));
+            curr ^= 1;
+        }
     }
 
-    auto res = QtConcurrent::blockingMappedReduced(sync.futures(),
+    auto res = QtConcurrent::blockingMappedReduced(syncs[curr].futures(),
                                                    std::function<wMap(QFuture<wMap>)>([](QFuture<wMap> prom) {
                                                        return prom.result();
                                                    }), merge);
