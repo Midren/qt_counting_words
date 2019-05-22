@@ -3,8 +3,10 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <array>
 #include <functional>
 
+#include <QFutureSynchronizer>
 #include <QtConcurrent/qtconcurrentmap.h>
 #include "boost/locale/boundary.hpp"
 #include "boost/locale.hpp"
@@ -104,7 +106,6 @@ int main(int argc, char *argv[]) {
         std::cout << "Invalid input: ./multiple_threads <path to config>" << std::endl;
     }
 
-    std::vector<wMap> map_vec = {wMap{}};
     std::string dir = "../.tmp/";
     boost::filesystem::create_directory(dir);
     boost::filesystem::path currentDir = boost::filesystem::current_path();
@@ -114,26 +115,27 @@ int main(int argc, char *argv[]) {
     boost::filesystem::recursive_directory_iterator it(dir), end;
 
     auto start_counting = get_current_wall_time_fenced();
-    std::vector<QFuture<wMap> > promises;
+    std::array<std::vector<std::vector<std::vector<std::string>>>, 2> word_blocks_vecs;
+    int curr = 0;
+    std::array<QFutureSynchronizer<wMap>, 2> syncs;
     for (auto &entry: boost::make_iterator_range(it, end)) {
         std::string previous = entry.path().string();
         std::string data = check_input(previous);
-        auto words_block = split_to_words(data);
-        auto new_vec = QtConcurrent::mappedReduced(words_block, count_words, merge);
-        promises.push_back(new_vec);
+        word_blocks_vecs[curr].emplace_back(split_to_words(data));
+        sync.addFuture(
+                QtConcurrent::mappedReduced(word_blocks_vecs[curr][word_blocks_vecs[curr].size() - 1], count_words, merge));
     }
 
-    auto res = QtConcurrent::mappedReduced(promises, std::function<wMap(QFuture<wMap>)>([](QFuture<wMap> prom) {
-        prom.waitForFinished();
-        return prom.result();
-    }), merge);
+    auto res = QtConcurrent::blockingMappedReduced(sync.futures(),
+                                                   std::function<wMap(QFuture<wMap>)>([](QFuture<wMap> prom) {
+                                                       return prom.result();
+                                                   }), merge);
 
-    res.waitForFinished();
     auto end_counting = get_current_wall_time_fenced();
 
     std::vector<std::pair<std::string, size_t>> tmp;
-    tmp.reserve(res.begin()->size());
-    for (auto x: *res.begin()) {
+    tmp.reserve(res.size());
+    for (auto x: res) {
         tmp.emplace_back(x.first, x.second);
     }
     std::sort(tmp.begin(), tmp.end(), [](auto x, auto y) {
@@ -152,5 +154,4 @@ int main(int argc, char *argv[]) {
     }
 
     std::cout << "Counting: " << to_us(end_counting - start_counting) << std::endl;
-    return 0;
 }
