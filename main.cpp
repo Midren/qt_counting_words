@@ -114,7 +114,6 @@ int main(int argc, char *argv[]) {
     boost::filesystem::recursive_directory_iterator it(dir), end;
 
     auto start_counting = get_current_wall_time_fenced();
-    size_t cnt = 0;
     std::vector<QFuture<wMap> > promises;
     for (auto &entry: boost::make_iterator_range(it, end)) {
         std::string previous = entry.path().string();
@@ -124,13 +123,9 @@ int main(int argc, char *argv[]) {
         promises.push_back(new_vec);
     }
 
-    for(auto prom: promises){
+    auto res = QtConcurrent::mappedReduced(promises, std::function<wMap(QFuture<wMap>)>([](QFuture<wMap> prom) {
         prom.waitForFinished();
-        map_vec.push_back(*prom.begin());
-    }
-
-    auto res = QtConcurrent::mappedReduced(map_vec, std::function<wMap(wMap)>([](wMap map) {
-        return map;
+        return prom.result();
     }), merge);
 
     res.waitForFinished();
